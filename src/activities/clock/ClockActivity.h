@@ -6,19 +6,24 @@
 #include <cstdint>
 
 #include "../Activity.h"
+#include "ClockConfig.h"
 
 /**
  * ClockActivity — NTP-syncable HH:MM clock with sleep/wake event logging.
  *
  * Button mapping:
  *   Back / Confirm      → return to Home
- *   PageBack  (Up)      → log "wake" event to SD, then NTP-sync time (M3/M4)
- *   PageForward (Down)  → log "sleep" event to SD (M4)
+ *   PageBack  (Up)      → log "wake" event to SD + HTTPS POST, then NTP-sync
+ *   PageForward (Down)  → log "sleep" event to SD + HTTPS POST
  *
- * A background tick task wakes at each minute boundary and triggers a
- * partial re-render. A full panel refresh fires every 60 renders (~1 h).
+ * Events that fail to POST are queued in /sleep-log-pending.jsonl and
+ * retried on the next WiFi-up cycle (next PageBack press).
+ *
+ * Configuration is read from /clock-config.json at onEnter().
  */
 class ClockActivity final : public Activity {
+  ClockConfig config;
+
   // Tick task — fires requestUpdate() at each minute boundary.
   TaskHandle_t tickTaskHandle = nullptr;
   static void tickTaskTrampoline(void* param);
@@ -28,9 +33,9 @@ class ClockActivity final : public Activity {
   int rendersSinceFullRefresh = 0;
   static constexpr int FULL_REFRESH_INTERVAL = 60;
 
-  // Status line shown below the date (e.g. "Time synced", "Sync failed").
+  // Transient status line shown below the date.
   char statusLine[32] = {};
-  uint32_t statusClearAfterMs = 0;  // millis() value at which to clear
+  uint32_t statusClearAfterMs = 0;
 
   void renderClock(bool fullRefresh);
 
@@ -38,9 +43,12 @@ class ClockActivity final : public Activity {
   void onNtpSyncRequested();
   void doNtpSync();
 
-  // Sleep/wake event logging (M4)
+  // Event logging + HTTPS POST (M4 / M5)
   static constexpr const char* LOG_PATH = "/sleep-log.jsonl";
+  static constexpr const char* PENDING_PATH = "/sleep-log-pending.jsonl";
   void logEvent(const char* eventType);
+  bool postEvent(const char* jsonLine);   // Returns true on HTTP 2xx
+  void flushPending();                    // Retry queued events; called after WiFi is up
 
  public:
   explicit ClockActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
