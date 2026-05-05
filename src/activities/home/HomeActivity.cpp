@@ -21,7 +21,7 @@
 #include "fontIds.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 4;  // File Browser, Recents, File transfer, Settings
+  int count = 5;  // File Browser, Recents, File transfer, Settings, Clock
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -180,29 +180,30 @@ void HomeActivity::loop() {
   });
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    // Calculate dynamic indices based on which options are available
+    int idx = 0;
+    int menuSelectedIndex = selectorIndex - static_cast<int>(recentBooks.size());
+    const int fileBrowserIdx = idx++;
+    const int recentsIdx = idx++;
+    const int opdsLibraryIdx = hasOpdsServers ? idx++ : -1;
+    const int fileTransferIdx = idx++;
+    const int settingsIdx = idx++;
+    const int clockIdx = idx;
+
     if (selectorIndex < recentBooks.size()) {
       onSelectBook(recentBooks[selectorIndex].path);
-    } else {
-      const int menuIndex = selectorIndex - static_cast<int>(recentBooks.size());
-      switch (indexToMenuItem(menuIndex, hasOpdsServers)) {
-        case HomeMenuItem::FILE_BROWSER:
-          onFileBrowserOpen();
-          break;
-        case HomeMenuItem::RECENTS:
-          onRecentsOpen();
-          break;
-        case HomeMenuItem::OPDS_BROWSER:
-          onOpdsBrowserOpen();
-          break;
-        case HomeMenuItem::FILE_TRANSFER:
-          onFileTransferOpen();
-          break;
-        case HomeMenuItem::SETTINGS_MENU:
-          onSettingsOpen();
-          break;
-        default:
-          break;
-      }
+    } else if (menuSelectedIndex == fileBrowserIdx) {
+      onFileBrowserOpen();
+    } else if (menuSelectedIndex == recentsIdx) {
+      onRecentsOpen();
+    } else if (menuSelectedIndex == opdsLibraryIdx) {
+      onOpdsBrowserOpen();
+    } else if (menuSelectedIndex == fileTransferIdx) {
+      onFileTransferOpen();
+    } else if (menuSelectedIndex == settingsIdx) {
+      onSettingsOpen();
+    } else if (menuSelectedIndex == clockIdx) {
+      onClockOpen();
     }
   }
 }
@@ -232,8 +233,8 @@ void HomeActivity::render(RenderLock&&) {
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), tr(STR_FILE_TRANSFER),
-                                        tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings};
+                                        tr(STR_SETTINGS_TITLE), tr(STR_CLOCK_MODE)};
+  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings, File};
 
   if (hasOpdsServers) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
@@ -281,3 +282,5 @@ void HomeActivity::onSettingsOpen() { activityManager.goToSettings(); }
 void HomeActivity::onFileTransferOpen() { activityManager.goToFileTransfer(); }
 
 void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
+
+void HomeActivity::onClockOpen() { activityManager.goToClock(); }
