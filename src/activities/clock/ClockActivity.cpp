@@ -50,7 +50,7 @@ void ClockActivity::onEnter() {
   // Save and apply display orientation.
   originalOrientation = renderer.getOrientation();
   const GfxRenderer::Orientation targetOrientation =
-      (settings.orientation == 1) ? GfxRenderer::LandscapeClockwise : GfxRenderer::Portrait;
+      (settings.orientation == 1) ? GfxRenderer::LandscapeCounterClockwise : GfxRenderer::Portrait;
   renderer.setOrientation(targetOrientation);
 
   // Apply timezone from settings via POSIX TZ string.
@@ -99,7 +99,7 @@ void ClockActivity::loop() {
         std::make_unique<ClockSettingsActivity>(renderer, mappedInput, &settings),
         [this](const ActivityResult&) {
           const GfxRenderer::Orientation target =
-              (settings.orientation == 1) ? GfxRenderer::LandscapeClockwise : GfxRenderer::Portrait;
+              (settings.orientation == 1) ? GfxRenderer::LandscapeCounterClockwise : GfxRenderer::Portrait;
           renderer.setOrientation(target);
           setenv("TZ", settings.getPosixTz(), 1);
           tzset();
