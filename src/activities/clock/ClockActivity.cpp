@@ -15,6 +15,7 @@
 
 #include "MappedInputManager.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 // ---------------------------------------------------------------------------
@@ -79,7 +80,8 @@ void ClockActivity::onExit() {
 }
 
 void ClockActivity::loop() {
-  mappedInput.update();
+  // Note: gpio.update() is already called by main.cpp before activityManager.loop(),
+  // so calling mappedInput.update() here would consume the state and make wasReleased() always false.
 
   // Exit clock mode
   if (mappedInput.wasReleased(MappedInputManager::Button::Back) ||
@@ -335,7 +337,6 @@ void ClockActivity::renderClock(bool fullRefresh) {
 
   const int timeLineH = renderer.getLineHeight(NOTOSERIF_18_FONT_ID);
   const int dateLineH = renderer.getLineHeight(UI_12_FONT_ID);
-  const int hintLineH = renderer.getLineHeight(UI_10_FONT_ID);
 
   const int blockH = timeLineH + 4 + dateLineH;
   const int timeY = (sh - blockH) / 2;
@@ -348,7 +349,11 @@ void ClockActivity::renderClock(bool fullRefresh) {
     renderer.drawCenteredText(UI_10_FONT_ID, dateY + dateLineH + 8, statusLine);
   }
 
-  renderer.drawCenteredText(UI_10_FONT_ID, sh - hintLineH - 8, tr(STR_CLOCK_BACK));
+  // Button hints mapped to physical button positions
+  const auto labels = mappedInput.mapLabels(
+      tr(STR_CLOCK_BACK), tr(STR_CLOCK_BACK),
+      tr(STR_CLOCK_WAKE_EVENT), tr(STR_CLOCK_SLEEP_EVENT));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   const HalDisplay::RefreshMode mode = fullRefresh ? HalDisplay::FULL_REFRESH : HalDisplay::FAST_REFRESH;
   renderer.displayBuffer(mode);
