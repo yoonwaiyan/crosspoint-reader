@@ -372,7 +372,23 @@ void ClockActivity::renderClock(bool fullRefresh) {
   const auto labels = mappedInput.mapLabels(
       tr(STR_CLOCK_BACK), tr(STR_CLOCK_SETTINGS),
       tr(STR_CLOCK_WAKE_EVENT), tr(STR_CLOCK_SLEEP_EVENT));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
+  if (renderer.getOrientation() == GfxRenderer::LandscapeCounterClockwise) {
+    // In landscape the front buttons are on the right edge.
+    // Portrait x4 positions {58,146,254,342} rotate to landscape y-centres 381,293,185,97.
+    // Draw top-to-bottom rotated text so it reads correctly when device is held horizontally.
+    const char* hintLabels[] = {labels.btn1, labels.btn2, labels.btn3, labels.btn4};
+    static constexpr int kYCenters[] = {381, 293, 185, 97};
+    const int hintX = renderer.getScreenWidth() - renderer.getLineHeight(SMALL_FONT_ID) - 2;
+    for (int i = 0; i < 4; i++) {
+      if (hintLabels[i] && hintLabels[i][0]) {
+        const int textW = renderer.getTextWidth(SMALL_FONT_ID, hintLabels[i]);
+        renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, kYCenters[i] + textW / 2, hintLabels[i]);
+      }
+    }
+  } else {
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  }
 
   const HalDisplay::RefreshMode mode = fullRefresh ? HalDisplay::FULL_REFRESH : HalDisplay::FAST_REFRESH;
   renderer.displayBuffer(mode);
