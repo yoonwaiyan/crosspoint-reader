@@ -58,7 +58,16 @@ void ClockActivity::onEnter() {
 
   xTaskCreate(tickTaskTrampoline, "ClockTick", 2048, this, 1, &tickTaskHandle);
 
-  requestUpdate();
+  // Auto-sync on first entry if the RTC is clearly unset (epoch / pre-2024).
+  struct timeval tv {};
+  gettimeofday(&tv, nullptr);
+  struct tm now {};
+  gmtime_r(&tv.tv_sec, &now);
+  if (now.tm_year + 1900 < 2024) {
+    onNtpSyncRequested();
+  } else {
+    requestUpdate();
+  }
 }
 
 void ClockActivity::onExit() {
