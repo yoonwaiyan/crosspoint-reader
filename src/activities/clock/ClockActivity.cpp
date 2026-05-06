@@ -13,6 +13,7 @@
 #include <cstring>
 #include <ctime>
 
+#include "ClockSettingsActivity.h"
 #include "MappedInputManager.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
@@ -44,18 +45,19 @@ void ClockActivity::onEnter() {
   Activity::onEnter();
 
   config.loadFromSd();
+  settings.loadFromSd();
 
-  // Apply timezone offset via POSIX TZ string (hours east of UTC, no DST).
-  if (config.timezoneOffsetMinutes != 0) {
-    const int offsetH = config.timezoneOffsetMinutes / 60;
-    const int offsetM = config.timezoneOffsetMinutes % 60;
-    char tzBuf[32];
-    // POSIX TZ sign convention is opposite to UTC offset: UTC+8 → "UTC-8"
-    snprintf(tzBuf, sizeof(tzBuf), "UTC%+d:%02d", -offsetH, abs(offsetM));
-    setenv("TZ", tzBuf, 1);
-    tzset();
-    LOG_INF("CLK", "TZ set to %s", tzBuf);
-  }
+  // Save and apply display orientation.
+  originalOrientation = renderer.getOrientation();
+  const GfxRenderer::Orientation targetOrientation =
+      (settings.orientation == 1) ? GfxRenderer::LandscapeClockwise : GfxRenderer::Portrait;
+  renderer.setOrientation(targetOrientation);
+
+  // Apply timezone from settings via POSIX TZ string.
+  const char* posixTz = settings.getPosixTz();
+  setenv("TZ", posixTz, 1);
+  tzset();
+  LOG_INF("CLK", "TZ set to %s", posixTz);
 
   xTaskCreate(tickTaskTrampoline, "ClockTick", 2048, this, 1, &tickTaskHandle);
 
@@ -76,6 +78,7 @@ void ClockActivity::onExit() {
     vTaskDelete(tickTaskHandle);
     tickTaskHandle = nullptr;
   }
+  renderer.setOrientation(originalOrientation);
   Activity::onExit();
 }
 
@@ -84,9 +87,25 @@ void ClockActivity::loop() {
   // so calling mappedInput.update() here would consume the state and make wasReleased() always false.
 
   // Exit clock mode
-  if (mappedInput.wasReleased(MappedInputManager::Button::Back) ||
-      mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     finish();
+    return;
+  }
+
+  // Confirm → open settings
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    startActivityForResult(
+        std::make_unique<ClockSettingsActivity>(renderer, mappedInput, &settings),
+        [this](const ActivityResult&) {
+          // Re-apply orientation in case it changed
+          const GfxRenderer::Orientation target =
+              (settings.orientation == 1) ? GfxRenderer::LandscapeClockwise : GfxRenderer::Portrait;
+          renderer.setOrientation(target);
+          // Re-apply timezone
+          setenv("TZ", settings.getPosixTz(), 1);
+          tzset();
+          requestUpdate();
+        });
     return;
   }
 
@@ -325,33 +344,34 @@ void ClockActivity::renderClock(bool fullRefresh) {
   struct tm now {};
   localtime_r(&tv.tv_sec, &now);
 
-  char timeBuf[6];
-  char dateBuf[12];
-  snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", now.tm_hour, now.tm_min);
-  snprintf(dateBuf, sizeof(dateBuf), "%04d-%02d-%02d",
-           now.tm_year + 1900, now.tm_mon + 1, now.tm_mday);
+  char timeBuf[12];
+  char dateBuf[24];
+  settings.formatTime(timeBuf, sizeof(timeBuf), now);
+  settings.formatDate(dateBuf, sizeof(dateBuf), now);
 
   renderer.clearScreen();
 
+  const int timeFontId = settings.getTimeFontId();
+  const EpdFontFamily::Style fontStyle = settings.getFontWeight();
   const int sh = renderer.getScreenHeight();
 
-  const int timeLineH = renderer.getLineHeight(NOTOSERIF_18_FONT_ID);
+  const int timeLineH = renderer.getLineHeight(timeFontId);
   const int dateLineH = renderer.getLineHeight(UI_12_FONT_ID);
 
   const int blockH = timeLineH + 4 + dateLineH;
   const int timeY = (sh - blockH) / 2;
   const int dateY = timeY + timeLineH + 4;
 
-  renderer.drawCenteredText(NOTOSERIF_18_FONT_ID, timeY, timeBuf);
+  renderer.drawCenteredText(timeFontId, timeY, timeBuf, true, fontStyle);
   renderer.drawCenteredText(UI_12_FONT_ID, dateY, dateBuf);
 
   if (statusLine[0] != '\0') {
     renderer.drawCenteredText(UI_10_FONT_ID, dateY + dateLineH + 8, statusLine);
   }
 
-  // Button hints mapped to physical button positions
+  // Button hints: Back=exit, Confirm=settings, Up=wake, Down=sleep
   const auto labels = mappedInput.mapLabels(
-      tr(STR_CLOCK_BACK), tr(STR_CLOCK_BACK),
+      tr(STR_CLOCK_BACK), tr(STR_CLOCK_SETTINGS),
       tr(STR_CLOCK_WAKE_EVENT), tr(STR_CLOCK_SLEEP_EVENT));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 

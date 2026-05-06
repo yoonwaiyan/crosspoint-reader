@@ -7,22 +7,26 @@
 
 #include "../Activity.h"
 #include "ClockConfig.h"
+#include "ClockSettings.h"
 
 /**
  * ClockActivity — NTP-syncable HH:MM clock with sleep/wake event logging.
  *
  * Button mapping:
- *   Back / Confirm      → return to Home
- *   PageBack  (Up)      → log "wake" event to SD + HTTPS POST, then NTP-sync
- *   PageForward (Down)  → log "sleep" event to SD + HTTPS POST
+ *   Back             → return to Home
+ *   Confirm          → open Clock Settings
+ *   PageBack  (Up)   → log "wake" event to SD + HTTPS POST, then NTP-sync
+ *   PageForward (Down) → log "sleep" event to SD + HTTPS POST
  *
  * Events that fail to POST are queued in /sleep-log-pending.jsonl and
  * retried on the next WiFi-up cycle (next PageBack press).
  *
- * Configuration is read from /clock-config.json at onEnter().
+ * Configuration is read from /clock-config.json and /clock-settings.json at onEnter().
  */
 class ClockActivity final : public Activity {
   ClockConfig config;
+  ClockSettings settings;
+  GfxRenderer::Orientation originalOrientation = GfxRenderer::Portrait;
 
   // Tick task — fires requestUpdate() at each minute boundary.
   TaskHandle_t tickTaskHandle = nullptr;
