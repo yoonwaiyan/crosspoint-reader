@@ -57,4 +57,7 @@ class ClockActivity final : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
+
+  // Keep the system awake so the tick task fires every minute uninterrupted.
+  bool preventAutoSleep() override { return true; }
 };
