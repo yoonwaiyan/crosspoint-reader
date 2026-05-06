@@ -27,12 +27,12 @@ void ClockSettingsActivity::onExit() { Activity::onExit(); }
 
 void ClockSettingsActivity::loop() {
   if (state == State::LIST) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       settings->saveToSd();
       finish();
       return;
     }
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       enterPicker(static_cast<Setting>(listIndex));
       return;
     }
@@ -46,12 +46,12 @@ void ClockSettingsActivity::loop() {
     });
 
   } else {  // PICKER
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
       state = State::LIST;
       requestUpdate();
       return;
     }
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
       confirmPicker();
       return;
     }
