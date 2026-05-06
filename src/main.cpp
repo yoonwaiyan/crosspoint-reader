@@ -68,6 +68,9 @@ EpdFont notoserif18ItalicFont(&notoserif_18_italic);
 EpdFont notoserif18BoldItalicFont(&notoserif_18_bolditalic);
 EpdFontFamily notoserif18FontFamily(&notoserif18RegularFont, &notoserif18BoldFont, &notoserif18ItalicFont,
                                     &notoserif18BoldItalicFont);
+EpdFont notoserif48RegularFont(&notoserif_48_regular);
+EpdFont notoserif48BoldFont(&notoserif_48_bold);
+EpdFontFamily notoserif48FontFamily(&notoserif48RegularFont, &notoserif48BoldFont);
 
 EpdFont notosans12RegularFont(&notosans_12_regular);
 EpdFont notosans12BoldFont(&notosans_12_bold);
@@ -93,6 +96,9 @@ EpdFont notosans18ItalicFont(&notosans_18_italic);
 EpdFont notosans18BoldItalicFont(&notosans_18_bolditalic);
 EpdFontFamily notosans18FontFamily(&notosans18RegularFont, &notosans18BoldFont, &notosans18ItalicFont,
                                    &notosans18BoldItalicFont);
+EpdFont notosans48RegularFont(&notosans_48_regular);
+EpdFont notosans48BoldFont(&notosans_48_bold);
+EpdFontFamily notosans48FontFamily(&notosans48RegularFont, &notosans48BoldFont);
 
 EpdFont opendyslexic8RegularFont(&opendyslexic_8_regular);
 EpdFont opendyslexic8BoldFont(&opendyslexic_8_bold);
@@ -310,11 +316,13 @@ void setupDisplayAndFonts(bool seamless = false) {
   renderer.insertFont(NOTOSERIF_12_FONT_ID, notoserif12FontFamily);
   renderer.insertFont(NOTOSERIF_16_FONT_ID, notoserif16FontFamily);
   renderer.insertFont(NOTOSERIF_18_FONT_ID, notoserif18FontFamily);
+  renderer.insertFont(NOTOSERIF_48_FONT_ID, notoserif48FontFamily);
 
   renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
   renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);
   renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
   renderer.insertFont(NOTOSANS_18_FONT_ID, notosans18FontFamily);
+  renderer.insertFont(NOTOSANS_48_FONT_ID, notosans48FontFamily);
   renderer.insertFont(OPENDYSLEXIC_8_FONT_ID, opendyslexic8FontFamily);
   renderer.insertFont(OPENDYSLEXIC_10_FONT_ID, opendyslexic10FontFamily);
   renderer.insertFont(OPENDYSLEXIC_12_FONT_ID, opendyslexic12FontFamily);

@@ -21,12 +21,14 @@ static constexpr ClockSettings::FontSizeEntry NOTOSERIF_SIZES[] = {
     {NOTOSERIF_14_FONT_ID, "14 pt"},
     {NOTOSERIF_16_FONT_ID, "16 pt"},
     {NOTOSERIF_18_FONT_ID, "18 pt"},
+    {NOTOSERIF_48_FONT_ID, "48 pt"},
 };
 static constexpr ClockSettings::FontSizeEntry NOTOSANS_SIZES[] = {
     {NOTOSANS_12_FONT_ID, "12 pt"},
     {NOTOSANS_14_FONT_ID, "14 pt"},
     {NOTOSANS_16_FONT_ID, "16 pt"},
     {NOTOSANS_18_FONT_ID, "18 pt"},
+    {NOTOSANS_48_FONT_ID, "48 pt"},
 };
 static constexpr ClockSettings::FontSizeEntry OPENDYSLEXIC_SIZES[] = {
     {OPENDYSLEXIC_8_FONT_ID,  " 8 pt"},
@@ -36,8 +38,8 @@ static constexpr ClockSettings::FontSizeEntry OPENDYSLEXIC_SIZES[] = {
 };
 
 const ClockSettings::FontFamilyEntry ClockSettings::FONT_FAMILIES[FONT_FAMILY_COUNT] = {
-    {"NotoSerif",    NOTOSERIF_SIZES,    4},
-    {"NotoSans",     NOTOSANS_SIZES,     4},
+    {"NotoSerif",    NOTOSERIF_SIZES,    5},
+    {"NotoSans",     NOTOSANS_SIZES,     5},
     {"OpenDyslexic", OPENDYSLEXIC_SIZES, 4},
 };
 
