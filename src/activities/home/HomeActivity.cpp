@@ -192,8 +192,8 @@ void HomeActivity::loop() {
     const int recentsIdx = idx++;
     const int opdsLibraryIdx = hasOpdsServers ? idx++ : -1;
     const int fileTransferIdx = idx++;
-    const int settingsIdx = idx++;
-    const int clockIdx = idx;
+    const int clockIdx = idx++;
+    const int settingsIdx = idx;
 
     if (selectorIndex < recentBooks.size()) {
       onSelectBook(recentBooks[selectorIndex].path);
@@ -205,10 +205,10 @@ void HomeActivity::loop() {
       onOpdsBrowserOpen();
     } else if (menuSelectedIndex == fileTransferIdx) {
       onFileTransferOpen();
-    } else if (menuSelectedIndex == settingsIdx) {
-      onSettingsOpen();
     } else if (menuSelectedIndex == clockIdx) {
       onClockOpen();
+    } else if (menuSelectedIndex == settingsIdx) {
+      onSettingsOpen();
     }
   }
 }
@@ -230,8 +230,8 @@ void HomeActivity::render(RenderLock&&) {
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), tr(STR_FILE_TRANSFER),
-                                        tr(STR_SETTINGS_TITLE), tr(STR_CLOCK_MODE)};
-  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings, File};
+                                        tr(STR_CLOCK_MODE), tr(STR_SETTINGS_TITLE)};
+  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Clock, Settings};
 
   if (hasOpdsServers) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
