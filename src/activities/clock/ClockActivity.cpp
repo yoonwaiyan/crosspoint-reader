@@ -92,16 +92,15 @@ void ClockActivity::loop() {
     return;
   }
 
-  // Confirm → open settings
+  // Confirm → open settings (always in portrait)
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
+    renderer.setOrientation(GfxRenderer::Portrait);
     startActivityForResult(
         std::make_unique<ClockSettingsActivity>(renderer, mappedInput, &settings),
         [this](const ActivityResult&) {
-          // Re-apply orientation in case it changed
           const GfxRenderer::Orientation target =
               (settings.orientation == 1) ? GfxRenderer::LandscapeClockwise : GfxRenderer::Portrait;
           renderer.setOrientation(target);
-          // Re-apply timezone
           setenv("TZ", settings.getPosixTz(), 1);
           tzset();
           requestUpdate();
