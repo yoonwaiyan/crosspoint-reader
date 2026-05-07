@@ -22,7 +22,12 @@ Welcome to the **CrossPoint** firmware. This guide outlines the hardware control
       - [3.6.4 System](#364-system)
       - [3.6.5 OPDS Servers (Multiple Libraries)](#365-opds-servers-multiple-libraries)
       - [3.6.6 KOReader Sync Quick Setup](#366-koreader-sync-quick-setup)
-    - [3.7 Sleep Screen](#37-sleep-screen)
+    - [3.7 Clock Mode](#37-clock-mode)
+      - [3.7.1 Clock Settings](#371-clock-settings)
+      - [3.7.2 NTP Time Sync](#372-ntp-time-sync)
+      - [3.7.3 Sleep & Wake Logging](#373-sleep--wake-logging)
+      - [3.7.4 Remote Event Endpoint](#374-remote-event-endpoint)
+    - [3.8 Sleep Screen](#38-sleep-screen)
   - [4. Reading Mode](#4-reading-mode)
     - [Page Turning](#page-turning)
     - [Chapter Navigation](#chapter-navigation)
@@ -122,7 +127,7 @@ The Settings screen allows you to configure the device's behavior. There are a f
 - **Sleep Screen**: Which sleep screen to display when the device sleeps:
   - "Dark" (default) - The default dark Crosspoint logo sleep screen
   - "Light" - The same default sleep screen, on a white background
-  - "Custom" - Custom images from the SD card; see [Sleep Screen](#37-sleep-screen) below for more information
+  - "Custom" - Custom images from the SD card; see [Sleep Screen](#38-sleep-screen) below for more information
   - "Cover" - The book cover image (Note: this is experimental and may not work as expected)
   - "None" - A blank screen
   - "Cover + Custom" - The book cover image, falls back to "Custom" behavior
@@ -330,7 +335,106 @@ If you use the HTTPS listener, use `https://<server-ip>:7200` (`curl -k` only fo
    - Choose **Apply Remote** to jump to remote progress.
    - Choose **Upload Local** to push current progress.
 
-### 3.7 Sleep Screen
+### 3.7 Clock Mode
+
+Clock Mode displays the current time and date on the e-ink screen, updated every minute. It also lets you log **wake** and **sleep** events at the press of a button — useful as a simple sleep tracker.
+
+Select **Clock** from the Home screen to enter. Pressing **Back** returns to the Home screen at any time; the e-reader is unaffected.
+
+#### Button controls
+
+| Button | Action |
+|--------|--------|
+| **Back** | Return to Home screen |
+| **Confirm** | Open Clock Settings |
+| **Up (PageBack)** | Log a `wake` event and sync time via NTP |
+| **Down (PageForward)** | Log a `sleep` event |
+
+The intended pattern: press **Up** when you wake up (logs the event and corrects the clock), press **Down** when you go to sleep.
+
+Clock Mode also supports a **landscape orientation** — configurable in Clock Settings — which rotates the display 90° counter-clockwise and repositions the button hints accordingly.
+
+#### 3.7.1 Clock Settings
+
+Press **Confirm** from the clock face to open settings (always displayed in portrait).
+
+| Setting | Options |
+|---------|---------|
+| **Timezone** | UTC−12 to UTC+12, including half-hour offsets (e.g. UTC+5:30, UTC+5:45) |
+| **Orientation** | Portrait / Landscape |
+| **Font Family** | Noto Serif, Noto Sans, Open Dyslexic |
+| **Font Size** | 12 pt, 14 pt, 16 pt, 18 pt, 48 pt (Serif/Sans); 8–14 pt (OpenDyslexic) |
+| **Font Weight** | Regular, Bold, Italic, Bold Italic |
+| **Time Format** | 24-hour (`HH:MM`) / 12-hour (`H:MM AM/PM`) |
+| **Date Format** | ISO (`YYYY-MM-DD`), DD/MM/YYYY, MM/DD/YYYY, with or without day name |
+
+> [!NOTE]
+> The timezone in Clock Settings uses a visual UTC-offset list and is separate from the `timezone_offset_minutes` field in `/clock-config.json`. If both are present the Clock Settings value takes precedence at runtime (it is saved to `/clock-settings.json` on the SD card).
+
+#### 3.7.2 NTP Time Sync
+
+Time is **not** synced automatically in the background. Sync is triggered manually by pressing **Up (PageBack)**, which:
+
+1. Connects to WiFi (reuses saved credentials from **Settings → WiFi Networks**; prompts for a network if none are saved).
+2. Queries the configured NTP server (default: `pool.ntp.org`).
+3. Updates the device RTC. The sync attempt has a **5-second timeout**; if it times out, a brief `"Sync failed"` message is shown and the clock continues using the local RTC.
+4. Flushes any queued pending events to the remote endpoint (if configured) while WiFi is still connected.
+5. Disconnects WiFi to preserve battery.
+
+On first entry into Clock Mode, if the device clock is clearly unset (year earlier than 2024), a sync is triggered automatically.
+
+To use a regional NTP server for lower latency, set `"ntp_server"` in `/clock-config.json` (e.g. `"asia.pool.ntp.org"`).
+
+#### 3.7.3 Sleep & Wake Logging
+
+Each button press appends a line to `/sleep-log.jsonl` on the SD card. The file is a plain JSON Lines file — one event per line, timestamps always in UTC:
+
+```jsonl
+{"event":"wake","ts":"2026-05-06T07:14:00Z"}
+{"event":"sleep","ts":"2026-05-06T23:01:00Z"}
+```
+
+This file is never deleted by the firmware and can be read directly from the SD card.
+
+#### 3.7.4 Remote Event Endpoint
+
+If you want events posted to a server in real time, create `/clock-config.json` at the **root of the SD card**:
+
+```json
+{
+  "endpoint_url": "https://your-endpoint.example.com/events",
+  "auth_token": "your-shared-secret",
+  "timezone_offset_minutes": 480,
+  "ntp_server": "pool.ntp.org"
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `endpoint_url` | *(empty — POST disabled)* | HTTPS URL to POST each event to. Must be `https://`. |
+| `auth_token` | *(empty)* | Sent as `Authorization: Bearer <token>`. |
+| `timezone_offset_minutes` | `0` (UTC) | UTC offset in minutes for the **displayed** local time. Examples: `480` = UTC+8, `60` = UTC+1, `-300` = UTC-5. Event timestamps are always UTC regardless of this value. |
+| `ntp_server` | `"pool.ntp.org"` | NTP server hostname. |
+
+All fields are optional — the clock works without the file.
+
+**What the server receives**
+
+Each event is an HTTP POST with a JSON body:
+
+```
+POST https://your-endpoint.example.com/events
+Content-Type: application/json
+Authorization: Bearer your-shared-secret
+
+{"event":"wake","ts":"2026-05-06T07:14:00Z"}
+```
+
+A `2xx` response marks the event as delivered. Any other response — or a network failure — appends the event to `/sleep-log-pending.jsonl` for retry. The next time **Up** is pressed and WiFi connects, all pending events are flushed in order. The pending file is deleted once every queued event receives a `2xx` acknowledgement.
+
+The endpoint can be any HTTPS service that accepts a `POST` with `Content-Type: application/json` — a Cloudflare Worker, AWS Lambda function URL, a simple home-server route, or any HTTP API. Certificate validation is skipped (the shared secret in `auth_token` provides authentication).
+
+### 3.8 Sleep Screen
 
 The **Sleep Screen** setting controls what is displayed when the device goes to sleep:
 
