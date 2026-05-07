@@ -374,17 +374,25 @@ void ClockActivity::renderClock(bool fullRefresh) {
       tr(STR_CLOCK_WAKE_EVENT), tr(STR_CLOCK_SLEEP_EVENT));
 
   if (renderer.getOrientation() == GfxRenderer::LandscapeCounterClockwise) {
-    // In landscape the front buttons are on the right edge.
-    // Portrait x4 positions {58,146,254,342} rotate to landscape y-centres 381,293,185,97.
-    // Draw top-to-bottom rotated text so it reads correctly when device is held horizontally.
+    // In landscape CCW (800×480, 1:1 panel), the front buttons are at x≈760 on the right edge.
+    // Portrait x4 positions {58,146,254,342} map to landscape Y-centres {381,293,185,97}.
+    // Draw compact horizontal boxes with normal text — no rotation needed in the 1:1 mapping.
     const char* hintLabels[] = {labels.btn1, labels.btn2, labels.btn3, labels.btn4};
     static constexpr int kYCenters[] = {381, 293, 185, 97};
-    const int hintX = renderer.getScreenWidth() - renderer.getLineHeight(SMALL_FONT_ID) - 2;
+    constexpr int kBoxW = 80;
+    // Mirror LyraTheme's portrait button sizing: buttonHeight=40, textYOffset=7.
+    constexpr int kBoxH = 40;
+    constexpr int kTextOffset = 7;  // matches LyraTheme::drawButtonHints textYOffset
+    const int sw = renderer.getScreenWidth();
+
     for (int i = 0; i < 4; i++) {
-      if (hintLabels[i] && hintLabels[i][0]) {
-        const int textW = renderer.getTextWidth(SMALL_FONT_ID, hintLabels[i]);
-        renderer.drawTextRotated90CW(SMALL_FONT_ID, hintX, kYCenters[i] + textW / 2, hintLabels[i]);
-      }
+      if (!hintLabels[i] || !hintLabels[i][0]) continue;
+      const int boxX = sw - kBoxW;
+      const int boxY = kYCenters[i] - kBoxH / 2;
+      renderer.fillRoundedRect(boxX, boxY, kBoxW, kBoxH, 4, Color::White);
+      renderer.drawRoundedRect(boxX, boxY, kBoxW, kBoxH, 1, 4, true);
+      const int textW = renderer.getTextWidth(SMALL_FONT_ID, hintLabels[i]);
+      renderer.drawText(SMALL_FONT_ID, boxX + (kBoxW - textW) / 2, boxY + kTextOffset, hintLabels[i]);
     }
   } else {
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
